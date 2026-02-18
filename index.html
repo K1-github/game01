@@ -222,7 +222,7 @@ body {
 </head>
 <body>
 
-<div class="version">v1.4</div>
+<div class="version">v1.5</div>
 <div class="game-wrapper">
   <div class="side-panel">
     <div class="panel-box">
@@ -572,7 +572,6 @@ bindBtn('btn-right', () => move(1, 0));
 bindBtn('btn-down', () => { if (move(0, 1)) score += 1; });
 bindBtn('btn-rotate', () => tryRotate());
 bindBtn('btn-drop', () => hardDrop());
-bindBtn('btn-pause', () => { paused = !paused; paused ? showOverlay('PAUSE') : hideOverlay(); });
 
 document.getElementById('start-btn').addEventListener('click', () => resetGame());
 
