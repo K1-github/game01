@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>テトリス</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -15,6 +15,8 @@ body {
   min-height: 100vh;
   font-family: 'Segoe UI', sans-serif;
   color: #eee;
+  overflow: hidden;
+  touch-action: none;
 }
 
 .game-wrapper {
@@ -100,6 +102,104 @@ body {
 .board-container {
   position: relative;
 }
+
+/* Touch controls */
+.touch-controls {
+  display: none;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  gap: 8px;
+}
+
+.touch-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.touch-btn {
+  background: #16213e;
+  border: 2px solid #0f3460;
+  color: #eee;
+  border-radius: 10px;
+  font-size: 24px;
+  width: 64px;
+  height: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.touch-btn:active {
+  background: #0f3460;
+}
+
+.touch-btn.wide {
+  width: 140px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Mobile layout */
+@media (max-width: 520px) {
+  body {
+    align-items: flex-start;
+    padding-top: 8px;
+  }
+
+  .game-wrapper {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .side-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    min-width: unset;
+    width: 100%;
+  }
+
+  .panel-box {
+    padding: 6px 10px;
+    min-width: 70px;
+  }
+
+  .panel-box h3 {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  .panel-box .value {
+    font-size: 18px;
+  }
+
+  #next-canvas {
+    width: 60px;
+    height: 60px;
+  }
+
+  #start-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .controls {
+    display: none;
+  }
+
+  .touch-controls {
+    display: flex;
+    flex-direction: column;
+  }
+}
 </style>
 </head>
 <body>
@@ -136,16 +236,45 @@ body {
     <canvas id="game-canvas" width="300" height="600"></canvas>
     <div class="overlay" id="overlay" style="display:none;"></div>
   </div>
+
+  <div class="touch-controls">
+    <div class="touch-row">
+      <div class="touch-btn" id="btn-rotate">&#x21BB;</div>
+      <div class="touch-btn wide" id="btn-drop">DROP</div>
+      <div class="touch-btn" id="btn-pause">&#9208;</div>
+    </div>
+    <div class="touch-row">
+      <div class="touch-btn" id="btn-left">&#9664;</div>
+      <div class="touch-btn" id="btn-down">&#9660;</div>
+      <div class="touch-btn" id="btn-right">&#9654;</div>
+    </div>
+  </div>
 </div>
 
 <script>
 const COLS = 10;
 const ROWS = 20;
-const BLOCK = 30;
+let BLOCK = 30;
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
+
+// Responsive canvas sizing
+function resizeCanvas() {
+  if (window.innerWidth <= 520) {
+    const maxW = Math.min(window.innerWidth - 20, 300);
+    BLOCK = Math.floor(maxW / COLS);
+    canvas.width = BLOCK * COLS;
+    canvas.height = BLOCK * ROWS;
+  } else {
+    BLOCK = 30;
+    canvas.width = 300;
+    canvas.height = 600;
+  }
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 const COLORS = [
   null,
@@ -347,18 +476,19 @@ function draw() {
   }
 
   // Next piece preview
+  const NB = Math.min(BLOCK, 25);
   nextCtx.fillStyle = '#16213e';
   nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
   if (nextPiece) {
-    const offsetX = (nextCanvas.width / BLOCK - nextPiece.shape[0].length) / 2;
-    const offsetY = (nextCanvas.height / BLOCK - nextPiece.shape.length) / 2;
+    const offsetX = (nextCanvas.width / NB - nextPiece.shape[0].length) / 2;
+    const offsetY = (nextCanvas.height / NB - nextPiece.shape.length) / 2;
     nextPiece.shape.forEach((row, y) => {
       row.forEach((val, x) => {
         if (val) {
           nextCtx.fillStyle = COLORS[val];
-          nextCtx.fillRect((offsetX + x) * BLOCK, (offsetY + y) * BLOCK, BLOCK, BLOCK);
+          nextCtx.fillRect((offsetX + x) * NB, (offsetY + y) * NB, NB, NB);
           nextCtx.strokeStyle = 'rgba(255,255,255,0.15)';
-          nextCtx.strokeRect((offsetX + x) * BLOCK, (offsetY + y) * BLOCK, BLOCK, BLOCK);
+          nextCtx.strokeRect((offsetX + x) * NB, (offsetY + y) * NB, NB, NB);
         }
       });
     });
@@ -401,7 +531,7 @@ function gameLoop(time) {
   requestAnimationFrame(gameLoop);
 }
 
-// Input
+// Keyboard input
 document.addEventListener('keydown', e => {
   if (!started || gameOver) return;
 
@@ -421,6 +551,41 @@ document.addEventListener('keydown', e => {
     case ' ':          hardDrop(); break;
   }
   e.preventDefault();
+});
+
+// Touch button controls
+function bindBtn(id, action) {
+  const el = document.getElementById(id);
+  let interval = null;
+  const doAction = () => {
+    if (!started || gameOver || paused) return;
+    action();
+  };
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    doAction();
+    // Repeat for left/right/down
+    if (id === 'btn-left' || id === 'btn-right' || id === 'btn-down') {
+      interval = setInterval(doAction, 100);
+    }
+  });
+  el.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (interval) { clearInterval(interval); interval = null; }
+  });
+  el.addEventListener('touchcancel', () => {
+    if (interval) { clearInterval(interval); interval = null; }
+  });
+}
+
+bindBtn('btn-left', () => move(-1, 0));
+bindBtn('btn-right', () => move(1, 0));
+bindBtn('btn-down', () => { if (move(0, 1)) score += 1; });
+bindBtn('btn-rotate', () => tryRotate());
+bindBtn('btn-drop', () => hardDrop());
+bindBtn('btn-pause', () => {
+  paused = !paused;
+  paused ? showOverlay('PAUSE') : hideOverlay();
 });
 
 document.getElementById('start-btn').addEventListener('click', () => {
