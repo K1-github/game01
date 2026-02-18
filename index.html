@@ -112,6 +112,15 @@ body {
   gap: 8px;
 }
 
+.show-touch .touch-controls {
+  display: flex;
+  flex-direction: column;
+}
+
+.show-touch .controls {
+  display: none;
+}
+
 .touch-row {
   display: flex;
   justify-content: center;
@@ -196,7 +205,7 @@ body {
   }
 
   .touch-controls {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
   }
 }
@@ -591,6 +600,11 @@ bindBtn('btn-pause', () => {
 document.getElementById('start-btn').addEventListener('click', () => {
   resetGame();
 });
+
+// Detect touch device and show touch controls
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  document.body.classList.add('show-touch');
+}
 
 // Init draw
 requestAnimationFrame(gameLoop);
