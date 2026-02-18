@@ -122,9 +122,9 @@ body {
   border: 2px solid #0f3460;
   color: #eee;
   border-radius: 10px;
-  font-size: 24px;
-  width: 64px;
-  height: 50px;
+  font-size: 22px;
+  flex: 1;
+  height: 48px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -139,8 +139,8 @@ body {
 }
 
 .touch-btn.wide {
-  width: 136px;
-  font-size: 16px;
+  flex: 1.5;
+  font-size: 14px;
   font-weight: bold;
 }
 
@@ -249,14 +249,11 @@ body {
 
   <div class="touch-controls">
     <div class="touch-row">
-      <div class="touch-btn" id="btn-rotate">&#x21BB;</div>
-      <div class="touch-btn wide" id="btn-drop">DROP</div>
-      <div class="touch-btn" id="btn-pause">&#9208;</div>
-    </div>
-    <div class="touch-row">
       <div class="touch-btn" id="btn-left">&#9664;</div>
       <div class="touch-btn" id="btn-down">&#9660;</div>
       <div class="touch-btn" id="btn-right">&#9654;</div>
+      <div class="touch-btn" id="btn-rotate">&#x21BB;</div>
+      <div class="touch-btn wide" id="btn-drop">DROP</div>
     </div>
   </div>
 </div>
@@ -275,8 +272,8 @@ function resizeCanvas() {
   if (isMobile) {
     // Calculate available height for the board
     const infoH = 60;   // top info panels
-    const ctrlH = 120;  // touch buttons
-    const padH = 20;    // padding
+    const ctrlH = 70;   // touch buttons (1 row)
+    const padH = 30;    // padding
     const availH = window.innerHeight - infoH - ctrlH - padH;
     const availW = window.innerWidth - 10;
 
