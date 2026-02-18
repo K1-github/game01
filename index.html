@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>テトリス</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -15,10 +15,10 @@ body {
   min-height: 100vh;
   font-family: 'Segoe UI', sans-serif;
   color: #eee;
-  overflow: hidden;
   touch-action: none;
 }
 
+/* Desktop layout */
 .game-wrapper {
   display: flex;
   gap: 20px;
@@ -64,7 +64,7 @@ body {
   display: block;
 }
 
-.controls {
+.controls-info {
   font-size: 11px;
   color: #888;
   line-height: 1.8;
@@ -103,22 +103,12 @@ body {
   position: relative;
 }
 
-/* Touch controls */
+/* Touch controls - hidden by default */
 .touch-controls {
   display: none;
   width: 100%;
-  max-width: 320px;
-  margin: 0 auto;
-  gap: 8px;
-}
-
-.show-touch .touch-controls {
-  display: flex;
+  gap: 6px;
   flex-direction: column;
-}
-
-.show-touch .controls {
-  display: none;
 }
 
 .touch-row {
@@ -134,7 +124,7 @@ body {
   border-radius: 10px;
   font-size: 24px;
   width: 64px;
-  height: 56px;
+  height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -149,64 +139,75 @@ body {
 }
 
 .touch-btn.wide {
-  width: 140px;
+  width: 136px;
   font-size: 16px;
   font-weight: bold;
 }
 
 /* Mobile layout */
-@media (max-width: 520px) {
+@media (max-width: 600px) {
   body {
     align-items: flex-start;
-    padding-top: 8px;
+    min-height: 100dvh;
   }
 
   .game-wrapper {
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    width: 100%;
+    padding: 4px;
+    height: 100dvh;
   }
 
   .side-panel {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     min-width: unset;
     width: 100%;
+    order: 0;
   }
 
   .panel-box {
-    padding: 6px 10px;
-    min-width: 70px;
+    padding: 4px 8px;
+    min-width: 60px;
   }
 
   .panel-box h3 {
-    font-size: 10px;
-    margin-bottom: 2px;
+    font-size: 9px;
+    margin-bottom: 1px;
   }
 
   .panel-box .value {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   #next-canvas {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
   }
 
   #start-btn {
-    padding: 8px 16px;
-    font-size: 14px;
+    padding: 6px 12px;
+    font-size: 13px;
   }
 
-  .controls {
+  .controls-info {
     display: none;
   }
 
+  .board-container {
+    order: 1;
+    flex: 1;
+    min-height: 0;
+  }
+
   .touch-controls {
-    display: flex !important;
-    flex-direction: column;
+    display: flex;
+    order: 2;
+    padding-bottom: 8px;
   }
 }
 </style>
@@ -232,7 +233,7 @@ body {
       <canvas id="next-canvas" width="100" height="100"></canvas>
     </div>
     <button id="start-btn">START</button>
-    <div class="controls">
+    <div class="controls-info">
       <div>&larr;&rarr; : 移動</div>
       <div>&darr; : 落下加速</div>
       <div>&uarr; : 回転</div>
@@ -269,42 +270,44 @@ const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
 
-// Responsive canvas sizing
 function resizeCanvas() {
-  if (window.innerWidth <= 520) {
-    const maxW = Math.min(window.innerWidth - 20, 300);
-    BLOCK = Math.floor(maxW / COLS);
-    canvas.width = BLOCK * COLS;
-    canvas.height = BLOCK * ROWS;
+  const isMobile = window.innerWidth <= 600;
+  if (isMobile) {
+    // Calculate available height for the board
+    const infoH = 60;   // top info panels
+    const ctrlH = 120;  // touch buttons
+    const padH = 20;    // padding
+    const availH = window.innerHeight - infoH - ctrlH - padH;
+    const availW = window.innerWidth - 10;
+
+    const blockFromH = Math.floor(availH / ROWS);
+    const blockFromW = Math.floor(availW / COLS);
+    BLOCK = Math.min(blockFromH, blockFromW);
+    BLOCK = Math.max(BLOCK, 12); // minimum size
   } else {
     BLOCK = 30;
-    canvas.width = 300;
-    canvas.height = 600;
   }
+  canvas.width = BLOCK * COLS;
+  canvas.height = BLOCK * ROWS;
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 const COLORS = [
   null,
-  '#00f0f0', // I - cyan
-  '#f0f000', // O - yellow
-  '#a000f0', // T - purple
-  '#00f000', // S - green
-  '#f00000', // Z - red
-  '#0000f0', // J - blue
-  '#f0a000', // L - orange
+  '#00f0f0', '#f0f000', '#a000f0', '#00f000',
+  '#f00000', '#0000f0', '#f0a000',
 ];
 
 const PIECES = [
   null,
-  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
-  [[2,2],[2,2]],                               // O
-  [[0,3,0],[3,3,3],[0,0,0]],                   // T
-  [[0,4,4],[4,4,0],[0,0,0]],                   // S
-  [[5,5,0],[0,5,5],[0,0,0]],                   // Z
-  [[6,0,0],[6,6,6],[0,0,0]],                   // J
-  [[0,0,7],[7,7,7],[0,0,0]],                   // L
+  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  [[2,2],[2,2]],
+  [[0,3,0],[3,3,3],[0,0,0]],
+  [[0,4,4],[4,4,0],[0,0,0]],
+  [[5,5,0],[0,5,5],[0,0,0]],
+  [[6,0,0],[6,6,6],[0,0,0]],
+  [[0,0,7],[7,7,7],[0,0,0]],
 ];
 
 const bgImage = new Image();
@@ -312,7 +315,7 @@ bgImage.src = 'theme/bg.png';
 
 let board = createBoard();
 let piece, piecePos, nextPiece, score = 0, lines = 0, level = 1;
-let dropInterval = 1000, dropTimer, gameOver = false, paused = false, started = false;
+let dropInterval = 1000, gameOver = false, paused = false, started = false;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -388,14 +391,12 @@ function clearLines() {
 
 function rotate(shape) {
   const N = shape.length;
-  const rotated = shape.map((r, y) => r.map((_, x) => shape[N - 1 - x][y]));
-  return rotated;
+  return shape.map((r, y) => r.map((_, x) => shape[N - 1 - x][y]));
 }
 
 function tryRotate() {
   const rotated = rotate(piece.shape);
-  const kicks = [0, -1, 1, -2, 2];
-  for (const kick of kicks) {
+  for (const kick of [0, -1, 1, -2, 2]) {
     const newPos = { x: piecePos.x + kick, y: piecePos.y };
     if (!collides(rotated, newPos)) {
       piece.shape = rotated;
@@ -432,9 +433,8 @@ function getGhostY() {
 }
 
 function drawBlock(context, x, y, colorIdx, alpha) {
-  const color = COLORS[colorIdx];
   context.globalAlpha = alpha || 1;
-  context.fillStyle = color;
+  context.fillStyle = COLORS[colorIdx];
   context.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
   context.strokeStyle = 'rgba(255,255,255,0.15)';
   context.strokeRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
@@ -442,7 +442,6 @@ function drawBlock(context, x, y, colorIdx, alpha) {
 }
 
 function draw() {
-  // Background
   ctx.fillStyle = '#0a0a1a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (bgImage.complete && bgImage.naturalWidth) {
@@ -451,7 +450,6 @@ function draw() {
     ctx.globalAlpha = 1;
   }
 
-  // Grid
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   for (let x = 0; x <= COLS; x++) {
     ctx.beginPath(); ctx.moveTo(x * BLOCK, 0); ctx.lineTo(x * BLOCK, ROWS * BLOCK); ctx.stroke();
@@ -460,23 +458,17 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(0, y * BLOCK); ctx.lineTo(COLS * BLOCK, y * BLOCK); ctx.stroke();
   }
 
-  // Board
   board.forEach((row, y) => {
-    row.forEach((val, x) => {
-      if (val) drawBlock(ctx, x, y, val);
-    });
+    row.forEach((val, x) => { if (val) drawBlock(ctx, x, y, val); });
   });
 
   if (piece && !gameOver) {
-    // Ghost
     const ghostY = getGhostY();
     piece.shape.forEach((row, y) => {
       row.forEach((val, x) => {
         if (val) drawBlock(ctx, piecePos.x + x, ghostY + y, val, 0.2);
       });
     });
-
-    // Current piece
     piece.shape.forEach((row, y) => {
       row.forEach((val, x) => {
         if (val) drawBlock(ctx, piecePos.x + x, piecePos.y + y, val);
@@ -484,20 +476,19 @@ function draw() {
     });
   }
 
-  // Next piece preview
   const NB = Math.min(BLOCK, 25);
   nextCtx.fillStyle = '#16213e';
   nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
   if (nextPiece) {
-    const offsetX = (nextCanvas.width / NB - nextPiece.shape[0].length) / 2;
-    const offsetY = (nextCanvas.height / NB - nextPiece.shape.length) / 2;
+    const ox = (nextCanvas.width / NB - nextPiece.shape[0].length) / 2;
+    const oy = (nextCanvas.height / NB - nextPiece.shape.length) / 2;
     nextPiece.shape.forEach((row, y) => {
       row.forEach((val, x) => {
         if (val) {
           nextCtx.fillStyle = COLORS[val];
-          nextCtx.fillRect((offsetX + x) * NB, (offsetY + y) * NB, NB, NB);
+          nextCtx.fillRect((ox + x) * NB, (oy + y) * NB, NB, NB);
           nextCtx.strokeStyle = 'rgba(255,255,255,0.15)';
-          nextCtx.strokeRect((offsetX + x) * NB, (offsetY + y) * NB, NB, NB);
+          nextCtx.strokeRect((ox + x) * NB, (oy + y) * NB, NB, NB);
         }
       });
     });
@@ -520,14 +511,10 @@ function hideOverlay() {
   document.getElementById('overlay').style.display = 'none';
 }
 
-// Game loop
-let lastTime = 0;
-let accum = 0;
-
+let lastTime = 0, accum = 0;
 function gameLoop(time) {
   const dt = time - lastTime;
   lastTime = time;
-
   if (started && !gameOver && !paused) {
     accum += dt;
     if (accum >= dropInterval) {
@@ -535,23 +522,19 @@ function gameLoop(time) {
       if (!move(0, 1)) lock();
     }
   }
-
   draw();
   requestAnimationFrame(gameLoop);
 }
 
-// Keyboard input
+// Keyboard
 document.addEventListener('keydown', e => {
   if (!started || gameOver) return;
-
   if (e.key === 'p' || e.key === 'P') {
     paused = !paused;
     paused ? showOverlay('PAUSE') : hideOverlay();
     return;
   }
-
   if (paused) return;
-
   switch (e.key) {
     case 'ArrowLeft':  move(-1, 0); break;
     case 'ArrowRight': move(1, 0); break;
@@ -562,29 +545,20 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
 });
 
-// Touch button controls
+// Touch buttons
 function bindBtn(id, action) {
   const el = document.getElementById(id);
   let interval = null;
-  const doAction = () => {
-    if (!started || gameOver || paused) return;
-    action();
-  };
+  const doAction = () => { if (started && !gameOver && !paused) action(); };
   el.addEventListener('touchstart', e => {
     e.preventDefault();
     doAction();
-    // Repeat for left/right/down
     if (id === 'btn-left' || id === 'btn-right' || id === 'btn-down') {
       interval = setInterval(doAction, 100);
     }
   });
-  el.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (interval) { clearInterval(interval); interval = null; }
-  });
-  el.addEventListener('touchcancel', () => {
-    if (interval) { clearInterval(interval); interval = null; }
-  });
+  el.addEventListener('touchend', e => { e.preventDefault(); clearInterval(interval); interval = null; });
+  el.addEventListener('touchcancel', () => { clearInterval(interval); interval = null; });
 }
 
 bindBtn('btn-left', () => move(-1, 0));
@@ -592,21 +566,10 @@ bindBtn('btn-right', () => move(1, 0));
 bindBtn('btn-down', () => { if (move(0, 1)) score += 1; });
 bindBtn('btn-rotate', () => tryRotate());
 bindBtn('btn-drop', () => hardDrop());
-bindBtn('btn-pause', () => {
-  paused = !paused;
-  paused ? showOverlay('PAUSE') : hideOverlay();
-});
+bindBtn('btn-pause', () => { paused = !paused; paused ? showOverlay('PAUSE') : hideOverlay(); });
 
-document.getElementById('start-btn').addEventListener('click', () => {
-  resetGame();
-});
+document.getElementById('start-btn').addEventListener('click', () => resetGame());
 
-// Detect touch device and show touch controls
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-  document.body.classList.add('show-touch');
-}
-
-// Init draw
 requestAnimationFrame(gameLoop);
 draw();
 showOverlay('START を押してね');
